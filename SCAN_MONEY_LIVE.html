@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCAN MONEY LIVE</title>
+<style>
+body{font-family:Arial;background:#f2f3f5;margin:0;padding:16px;color:#111}
+.card{background:#fff;border-radius:18px;padding:20px;margin:auto;max-width:650px;box-shadow:0 2px 12px #0002}
+button{width:100%;padding:17px;border:0;border-radius:12px;background:#111;color:#fff;font-size:19px;font-weight:bold}
+.result{margin-top:10px;padding:14px;border-radius:12px;background:#f5f5f5}
+.good{background:#e8f7e8}.warn{background:#fff4d5}.muted{color:#666;font-size:13px}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>💰 SCAN MONEY LIVE</h1>
+<p class="muted">Skenira javno dostopne podatke. Ne zagotavlja zaslužka.</p>
+<button id="scan">🔎 SCAN MONEY</button>
+<div id="status" class="result">Pripravljen.</div>
+<div id="out"></div>
+</div>
+<script>
+const out=document.getElementById("out"),status=document.getElementById("status");
+async function get(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json()}
+document.getElementById("scan").onclick=async()=>{
+status.textContent="⏳ Skeniram...";
+out.innerHTML="";
+let html="";
+try{
+ const [btc,eth]=await Promise.all([
+  get("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT"),
+  get("https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT")
+ ]);
+ html+="<div class='result'><b>₿ BTC</b> $"+Number(btc.lastPrice).toLocaleString()+" · 24h "+Number(btc.priceChangePercent).toFixed(2)+"%</div>";
+ html+="<div class='result'><b>Ξ ETH</b> $"+Number(eth.lastPrice).toLocaleString()+" · 24h "+Number(eth.priceChangePercent).toFixed(2)+"%</div>";
+ if(Math.abs(Number(btc.priceChangePercent))>=5||Math.abs(Number(eth.priceChangePercent))>=5)
+   html+="<div class='result good'><b>📈 Močan tržni premik</b><br>To je signal za dodatno analizo, ne zagotovljen dobiček.</div>";
+}catch(e){html+="<div class='result warn'>Kripto vir trenutno ni dosegljiv: "+e.message+"</div>"}
+try{
+ const leagues=[
+ ["Premier League","eng.1"],["La Liga","esp.1"],["Serie A","ita.1"],
+ ["Bundesliga","ger.1"],["NBA","basketball/nba"]
+ ];
+ let events=[];
+ for(const [name,id] of leagues){
+  try{
+   const d=await get("https://site.api.espn.com/apis/site/v2/sports/"+(id.includes("/")?id:id.startsWith("basketball")?id:"soccer/"+id)+"/scoreboard");
+   for(const e of (d.events||[])) events.push(name+": "+e.name);
+  }catch(_){}
+ }
+ html+="<div class='result'><b>📅 Današnji dogodki</b><br>"+(events.length?events.slice(0,30).map(x=>"• "+x).join("<br>"):"Trenutno jih ni mogoče pridobiti.")+"</div>";
+}catch(e){}
+html+="<div class='result warn'><b>⚠️ Pomembno</b><br>Bot ne more zagotoviti 50 € na dan. Ne prikazuje izmišljenih 'zagotovljenih' priložnosti.</div>";
+out.innerHTML=html;status.textContent="✅ Scan končan · "+new Date().toLocaleString("sl-SI");
+}
+</script>
+</body>
+</html>
