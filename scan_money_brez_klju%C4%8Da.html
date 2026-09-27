@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCAN MONEY — brez ključa</title>
+<style>
+body{font-family:Arial;background:#f2f3f5;margin:0;color:#151515}.wrap{max-width:900px;margin:auto;padding:15px}
+.card{background:#fff;border-radius:16px;padding:18px;margin:12px 0;box-shadow:0 2px 12px #0001}
+h1{margin:0 0 6px}.sub,.small{color:#666;font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #ccc;border-radius:9px;font-size:16px;margin-top:5px}
+button{width:100%;padding:15px;border:0;border-radius:11px;background:#111;color:#fff;font-size:17px;font-weight:bold;margin-top:12px}
+.result{border:1px solid #ddd;border-radius:11px;padding:13px;margin:9px 0}.green{background:#e8f7e8}.yellow{background:#fff5d7}.red{background:#ffe8e8}
+.pill{display:inline-block;padding:4px 8px;background:#eee;border-radius:99px;font-size:12px;margin:2px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}}
+</style></head>
+<body><div class="wrap">
+<div class="card">
+<h1>💰 SCAN MONEY</h1>
+<div class="sub">Odpreš in pritisneš SCAN. Brez API ključa ali prijave.</div>
+<div class="grid"><div><label>Kapital (€)</label><input id="capital" type="number" value="100"></div>
+<div><label>Cilj (€ / dan)</label><input id="target" type="number" value="50"></div></div>
+<button onclick="scan()">🔎 SCAN MONEY</button><div id="status" class="result">Pripravljen.</div>
+</div>
+<div id="summary" class="card"></div><div id="crypto" class="card"></div><div id="sports" class="card"></div><div id="ideas" class="card"></div>
+<div class="card small"><b>Opomba:</b> brez osebnih/API ključev lahko uporablja samo javne podatke. Ne oddaja stav, nakupov ali prodaj in ne zagotavlja dobička.</div>
+</div>
+<script>
+const $=x=>document.getElementById(x);
+const eur=n=>new Intl.NumberFormat('sl-SI',{style:'currency',currency:'EUR'}).format(n);
+async function get(url){let r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+function status(t,c='result'){$('status').className=c;$('status').textContent=t;}
+async function crypto(){
+ const b=$('crypto'); b.innerHTML='<h2>₿ Kripto</h2><div class="result">Nalagam...</div>';
+ try{
+  const a=await get('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
+  const e=await get('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT');
+  b.innerHTML='<h2>₿ Kripto</h2>'+
+  '<div class="result green"><b>BTC</b> '+Number(a.lastPrice).toLocaleString('en-US',{maximumFractionDigits:2})+
+  ' USD <span class="pill">24h '+Number(a.priceChangePercent).toFixed(2)+'%</span></div>'+
+  '<div class="result"><b>ETH</b> '+Number(e.lastPrice).toLocaleString('en-US',{maximumFractionDigits:2})+
+  ' USD <span class="pill">24h '+Number(e.priceChangePercent).toFixed(2)+'%</span></div>'+
+  '<div class="small">Javni tržni podatki; niso sami po sebi signal za nakup/prodajo.</div>';
+ }catch(e){b.innerHTML='<h2>₿ Kripto</h2><div class="result yellow">Javni API ni dosegljiv iz tega načina odpiranja: '+e.message+'</div>';}
+}
+async function sports(){
+ const b=$('sports'); b.innerHTML='<h2>⚽ Šport</h2><div class="result">Iščem dogodke...</div>';
+ const feeds=[
+ 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard',
+ 'https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/scoreboard',
+ 'https://site.api.espn.com/apis/site/v2/sports/soccer/ita.1/scoreboard',
+ 'https://site.api.espn.com/apis/site/v2/sports/soccer/ger.1/scoreboard'];
+ let all=[];
+ for(const u of feeds){try{const d=await get(u);for(const x of (d.events||[]))all.push({n:x.name,d:x.date});}catch(e){}}
+ const seen=new Set();all=all.filter(x=>{if(seen.has(x.n))return false;seen.add(x.n);return true});
+ if(!all.length){b.innerHTML='<h2>⚽ Šport</h2><div class="result yellow">Javnih športnih podatkov trenutno ni mogoče pridobiti.</div>';return;}
+ b.innerHTML='<h2>⚽ Današnji dogodki</h2>'+all.slice(0,25).map(x=>'<div class="result"><b>'+x.n+'</b><br><span class="small">'+new Date(x.d).toLocaleString('sl-SI')+'</span></div>').join('');
+}
+function ideas(){
+ const c=+$('capital').value||100,t=+$('target').value||50;
+ $('ideas').innerHTML='<h2>💡 SCAN</h2><div class="result yellow"><b>Kapital '+eur(c)+' · cilj '+eur(t)+'/dan</b><br>'+
+ 'Bot brez ključa ne bo izmišljal priložnosti. Pregleda lahko javne tržne/športne podatke; za pravi izračun value ali arbitraže potrebuje konkretne aktualne cene oziroma kvote.</div>';
+}
+async function scan(){
+ status('Skeniram javne podatke...');
+ $('summary').innerHTML='<h2>📊 SCAN</h2><div class="result">Kapital: '+eur(+$('capital').value||100)+' · cilj: '+eur(+$('target').value||50)+'/dan</div>';
+ ideas(); await Promise.allSettled([crypto(),sports()]); status('Scan končan.');
+}
+</script></body></html>
